@@ -1,4 +1,4 @@
-# Recipe Parser - Boolean Query Builder
+# Lexical Parser Demonstration: Recipe Finder
 
 A portfolio project demonstrating Boolean logic parsing, tokenization, and query evaluation using a recipe search domain.
 
@@ -24,6 +24,13 @@ This will start:
 - **Frontend**: Angular 18 with TypeScript
 - **Data Source**: TheMealDB API integration
 - **Key Feature**: **Text → AST → SQL** transformation pipeline
+
+## 📦 Repository Structure
+
+This project is split into two specialized repositories:
+
+- **🔗 Backend API**: [RecipeFinder_API](https://github.com/stevewash123/RecipeFinder_API) - C# ASP.NET Core Web API
+- **🔗 Frontend UI**: [RecipeFinder_UI](https://github.com/stevewash123/RecipeFinder_UI) - Angular 18 TypeScript Application
 
 ## 📋 Features
 
