@@ -1,0 +1,399 @@
+<div class="container">
+  <div class="header">
+    <h1>🍳 Recipe Finder</h1>
+    <p>Boolean Query Builder - Portfolio Demo</p>
+    <button class="info-btn" (click)="toggleInfoDialog()" title="Learn about parsers">
+      ℹ️ What is a Parser?
+    </button>
+  </div>
+
+  <!-- SEARCH VIEW -->
+  <div class="builder-section" *ngIf="currentView === 'search'">
+    <h2 class="builder-title">Build Your Search Query</h2>
+
+    <!-- 2x2 GRID LAYOUT -->
+    <div class="controls-grid">
+      <!-- CUISINE TYPE -->
+      <div class="control-group">
+        <label>Cuisine Type:</label>
+        <div class="control-row">
+          <select #cuisineSelect>
+            <option value="">Select cuisine...</option>
+            <option *ngFor="let area of dropdownOptions.areas" [value]="area">{{ area }}</option>
+          </select>
+          <div class="include-exclude-toggle">
+            <button
+              class="toggle-btn"
+              [class.active]="state.cuisines.mode === 'include'"
+              (click)="setCuisineMode('include')">
+              Include
+            </button>
+            <button
+              class="toggle-btn exclude"
+              [class.active]="state.cuisines.mode === 'exclude'"
+              (click)="setCuisineMode('exclude')">
+              Exclude
+            </button>
+          </div>
+          <button class="btn-add" (click)="addCuisine(cuisineSelect)">Add</button>
+        </div>
+        <div class="selected-items">
+          <div *ngFor="let cuisine of state.cuisines.include" class="selected-item include">
+            {{ cuisine }}
+            <span class="remove-x" (click)="removeCuisine(cuisine, 'include')">✕</span>
+          </div>
+        </div>
+        <div class="selected-items">
+          <div *ngFor="let cuisine of state.cuisines.exclude" class="selected-item exclude">
+            NOT {{ cuisine }}
+            <span class="remove-x" (click)="removeCuisine(cuisine, 'exclude')">✕</span>
+          </div>
+        </div>
+        <div class="operator-toggle" *ngIf="state.cuisines.include.length > 1">
+          <label>Combine included with:</label>
+          <button
+            class="operator-btn"
+            [class.active]="state.cuisines.operator === 'OR'"
+            (click)="setCuisineOperator('OR')">
+            OR
+          </button>
+          <button
+            class="operator-btn"
+            [class.active]="state.cuisines.operator === 'AND'"
+            (click)="setCuisineOperator('AND')">
+            AND
+          </button>
+        </div>
+      </div>
+
+      <!-- INGREDIENTS -->
+      <div class="control-group">
+        <label>Ingredients:</label>
+        <div class="control-row">
+          <select #ingredientSelect>
+            <option value="">Select ingredient...</option>
+            <option *ngFor="let ingredient of dropdownOptions.ingredients" [value]="ingredient">{{ ingredient }}</option>
+          </select>
+          <div class="include-exclude-toggle">
+            <button
+              class="toggle-btn"
+              [class.active]="state.ingredients.mode === 'include'"
+              (click)="setIngredientMode('include')">
+              Include
+            </button>
+            <button
+              class="toggle-btn exclude"
+              [class.active]="state.ingredients.mode === 'exclude'"
+              (click)="setIngredientMode('exclude')">
+              Exclude
+            </button>
+          </div>
+          <button class="btn-add" (click)="addIngredient(ingredientSelect)">Add</button>
+        </div>
+        <div class="selected-items">
+          <div *ngFor="let ingredient of state.ingredients.include" class="selected-item include">
+            {{ ingredient }}
+            <span class="remove-x" (click)="removeIngredient(ingredient, 'include')">✕</span>
+          </div>
+        </div>
+        <div class="selected-items">
+          <div *ngFor="let ingredient of state.ingredients.exclude" class="selected-item exclude">
+            NOT {{ ingredient }}
+            <span class="remove-x" (click)="removeIngredient(ingredient, 'exclude')">✕</span>
+          </div>
+        </div>
+        <div class="operator-toggle" *ngIf="state.ingredients.include.length > 1">
+          <label>Combine included with:</label>
+          <button
+            class="operator-btn"
+            [class.active]="state.ingredients.includeOperator === 'AND'"
+            (click)="setIngredientIncludeOperator('AND')">
+            AND
+          </button>
+          <button
+            class="operator-btn"
+            [class.active]="state.ingredients.includeOperator === 'OR'"
+            (click)="setIngredientIncludeOperator('OR')">
+            OR
+          </button>
+        </div>
+      </div>
+
+      <!-- DIETARY RESTRICTIONS -->
+      <div class="control-group">
+        <label>Dietary Restrictions:</label>
+        <div class="control-row">
+          <select #dietSelect>
+            <option value="">Select diet...</option>
+            <option value="vegetarian">Vegetarian</option>
+            <option value="vegan">Vegan</option>
+            <option value="gluten_free">Gluten Free</option>
+            <option value="dairy_free">Dairy Free</option>
+            <option value="keto">Keto</option>
+            <option value="paleo">Paleo</option>
+            <option value="low_carb">Low Carb</option>
+          </select>
+          <button class="btn-add" (click)="addDiet(dietSelect)">Add</button>
+        </div>
+        <div class="selected-items">
+          <div *ngFor="let diet of state.diets" class="selected-item include">
+            {{ formatDiet(diet) }}
+            <span class="remove-x" (click)="removeDiet(diet)">✕</span>
+          </div>
+        </div>
+        <div class="operator-toggle" *ngIf="state.diets.length > 1">
+          <label>Combine with:</label>
+          <button
+            class="operator-btn"
+            [class.active]="state.dietOperator === 'AND'"
+            (click)="setDietOperator('AND')">
+            AND
+          </button>
+          <button
+            class="operator-btn"
+            [class.active]="state.dietOperator === 'OR'"
+            (click)="setDietOperator('OR')">
+            OR
+          </button>
+        </div>
+      </div>
+
+      <!-- ADDITIONAL OPTIONS -->
+      <div class="control-group">
+        <label>Additional Options:</label>
+        <div class="control-row">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="state.quick" (change)="onQuickChange()">
+            <span>Quick (under 30 minutes)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="state.easy" (change)="onEasyChange()">
+            <span>Easy (beginner friendly)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESET QUERIES -->
+    <div class="preset-queries">
+      <h3>💡 Try Complex Queries:</h3>
+      <div class="preset-buttons">
+        <button
+          *ngFor="let preset of presetQueries"
+          class="preset-btn"
+          (click)="applyPresetQuery(preset)"
+          [title]="preset.description">
+          <span class="preset-icon">{{ preset.icon }}</span>
+          <span class="preset-name">{{ preset.name }}</span>
+          <span class="preset-query">{{ preset.query }}</span>
+        </button>
+        <button class="preset-btn clear-btn" (click)="clearQuery()" title="Clear all selections">
+          <span class="preset-icon">🗑️</span>
+          <span class="preset-name">Clear</span>
+          <span class="preset-query">Reset everything</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- QUERY DISPLAY -->
+    <div class="query-display">
+      <h3>📝 Your Search Query:</h3>
+      <div class="query-text" [class.empty]="!hasQuery()">
+        {{ searchQuery || 'Build your query by making selections above...' }}
+      </div>
+    </div>
+
+    <button
+      class="search-button"
+      [disabled]="!hasQuery() || isSearching"
+      (click)="performSearch()">
+      🔍 {{ isSearching ? 'Searching...' : 'GO - Search Recipes' }}
+    </button>
+  </div>
+
+  <!-- RESULTS VIEW -->
+  <div class="results-view" *ngIf="currentView === 'results'">
+    <div class="results-header-section">
+      <button class="back-btn" (click)="backToSearch()">
+        ← Back to Search
+      </button>
+      <div class="results-summary">
+        <h2>Search Results</h2>
+        <p class="search-query-display">Query: <span class="query-text">{{ searchQuery }}</span></p>
+        <p class="results-count">
+          Found <span class="count">{{ resultCount }}</span> recipes
+          <span *ngIf="executionTime"> in {{ executionTime }}</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- ANALYSIS TABS -->
+    <div class="analysis-section">
+      <div class="tab-buttons">
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'recipes'"
+          (click)="setActiveTab('recipes')">
+          📋 Recipe Results ({{ resultCount }})
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'parse'"
+          (click)="setActiveTab('parse')">
+          🌳 Parse Tree Analysis
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'sql'"
+          (click)="setActiveTab('sql')">
+          🗄️ Generated SQL
+        </button>
+      </div>
+
+      <!-- RECIPES TAB -->
+      <div class="tab-content recipes-tab" *ngIf="activeTab === 'recipes'">
+        <div class="recipe-grid">
+          <div *ngFor="let recipe of searchResults" class="recipe-card">
+            <h3>{{ recipe.name }}</h3>
+            <div class="recipe-meta">
+              <span>🌍 {{ recipe.area }}</span>
+              <span>🍽️ {{ recipe.category }}</span>
+            </div>
+            <div class="recipe-tags">
+              <span class="tag cuisine">{{ recipe.area }}</span>
+              <span *ngFor="let ingredient of recipe.ingredients.slice(0, 3)" class="tag">{{ ingredient }}</span>
+              <span *ngFor="let tag of recipe.tags" class="tag diet">{{ formatDiet(tag) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PARSE TREE TAB -->
+      <div class="tab-content parse-tab" *ngIf="activeTab === 'parse'">
+        <div *ngIf="parseTree; else noParseTree">
+          <h4>Parse Tree Analysis:</h4>
+          <div class="parse-tree-content">
+            <pre>{{ parseTree.structure }}</pre>
+          </div>
+          <div class="parse-tree-details">
+            <p><strong>Terms:</strong> {{ parseTree.terms.join(', ') || 'None' }}</p>
+            <p><strong>Operators:</strong> {{ parseTree.operators.join(', ') || 'None' }}</p>
+            <p><strong>Features:</strong>
+              <span *ngIf="parseTree.hasParentheses">Parentheses </span>
+              <span *ngIf="parseTree.hasNot">NOT operator </span>
+              <span *ngIf="!parseTree.hasParentheses && !parseTree.hasNot">Simple expression</span>
+            </p>
+          </div>
+        </div>
+        <ng-template #noParseTree>
+          <p class="no-tree">No parse tree available for this query</p>
+        </ng-template>
+      </div>
+
+      <!-- SQL TAB -->
+      <div class="tab-content sql-tab" *ngIf="activeTab === 'sql'">
+        <div *ngIf="generatedSQL && generatedSQL.trim(); else noSQL">
+          <h4>Generated SQL Query:</h4>
+          <div class="sql-content">
+            <pre>{{ generatedSQL }}</pre>
+          </div>
+          <div class="sql-explanation">
+            <p><strong>Transformation Process:</strong></p>
+            <ol>
+              <li><span class="step">Text Input:</span> Boolean query string</li>
+              <li><span class="step">Tokenization:</span> Break into operators and terms</li>
+              <li><span class="step">Parse Tree:</span> Build abstract syntax tree</li>
+              <li><span class="step">Code Generation:</span> Transform AST to SQL</li>
+            </ol>
+            <p class="highlight">This demonstrates how parsers enable <strong>text → structure → executable code</strong> transformation!</p>
+          </div>
+        </div>
+        <ng-template #noSQL>
+          <p class="no-tree">No SQL generated for this query</p>
+          <p><em>Debug: generatedSQL = "{{ generatedSQL }}"</em></p>
+          <p><em>Debug: searchQuery = "{{ searchQuery }}"</em></p>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-section" [class.visible]="searchResults.length > 0" style="display: none;">
+    <h2 class="results-header">
+      Results: <span class="results-count">{{ resultCount }}</span> recipes found
+      <span *ngIf="executionTime"> ({{ executionTime }})</span>
+    </h2>
+    <div class="recipe-grid">
+      <div *ngFor="let recipe of searchResults" class="recipe-card">
+        <h3>{{ recipe.name }}</h3>
+        <div class="recipe-meta">
+          <span>🌍 {{ recipe.area }}</span>
+          <span>🍽️ {{ recipe.category }}</span>
+        </div>
+        <div class="recipe-tags">
+          <span class="tag cuisine">{{ recipe.area }}</span>
+          <span *ngFor="let ingredient of recipe.ingredients.slice(0, 3)" class="tag">{{ ingredient }}</span>
+          <span *ngFor="let tag of recipe.tags" class="tag diet">{{ formatDiet(tag) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO DIALOG -->
+  <div class="dialog-overlay" [class.visible]="showInfoDialog" (click)="closeInfoDialog()">
+    <div class="dialog-content" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h2>🔍 Understanding Parsers & Tokenization</h2>
+        <button class="close-btn" (click)="closeInfoDialog()">✕</button>
+      </div>
+      <div class="dialog-body">
+        <section>
+          <h3>🧩 What is a Parser?</h3>
+          <p>A <strong>parser</strong> is a software component that transforms <strong>text → structure → executable code</strong>. It analyzes text according to formal grammar rules and converts it into a structured format that computers can understand and process.</p>
+          <div class="transformation-flow">
+            <span class="flow-step">Text Rules</span>
+            <span class="arrow">→</span>
+            <span class="flow-step">Abstract Syntax Tree</span>
+            <span class="arrow">→</span>
+            <span class="flow-step">SQL/Code/Actions</span>
+          </div>
+        </section>
+
+        <section>
+          <h3>🔤 Tokenization</h3>
+          <p><strong>Tokenization</strong> is the first step in parsing - breaking down text into individual meaningful units called "tokens". For example:</p>
+          <div class="code-example">
+            <strong>Input:</strong> "chicken AND (italian OR mexican)"<br>
+            <strong>Tokens:</strong> ["chicken", "AND", "(", "italian", "OR", "mexican", ")"]
+          </div>
+        </section>
+
+        <section>
+          <h3>🌳 Parse Trees & AST</h3>
+          <p>Parsers create <strong>Abstract Syntax Trees (AST)</strong> that represent the grammatical structure of the input. This demo shows a simplified parse tree for Boolean queries and demonstrates <strong>code generation</strong> by transforming the AST into executable SQL.</p>
+          <div class="feature-highlight">
+            <strong>💡 Try the SQL Generation:</strong> Build a query and click "Show Generated SQL" to see how the AST transforms into database queries!
+          </div>
+        </section>
+
+        <section>
+          <h3>🚀 Real-World Applications</h3>
+          <ul>
+            <li><strong>Programming Languages:</strong> Compilers use parsers to understand code (JavaScript, Python, C#)</li>
+            <li><strong>Search Engines:</strong> Google, Elasticsearch parse complex queries</li>
+            <li><strong>Databases:</strong> SQL query parsing and optimization</li>
+            <li><strong>Configuration Files:</strong> JSON, XML, YAML parsers</li>
+            <li><strong>Natural Language:</strong> AI chatbots parse human language</li>
+            <li><strong>Test Grading:</strong> Academic systems parse grading rules and criteria</li>
+            <li><strong>Financial Systems:</strong> Trading algorithms parse market data</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>💼 Why This Matters</h3>
+          <p>This demo showcases skills in <strong>lexical analysis</strong>, <strong>syntax parsing</strong>, and <strong>tree construction</strong> - fundamental concepts in computer science used across web development, data processing, and system design.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+</div>

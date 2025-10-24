@@ -1,0 +1,1011 @@
+Recipe Finder - Boolean Query Parser Demo
+Project Goal
+Build a portfolio demo showcasing a Boolean logic parser (similar to one built for work that processed test grading rules). This demonstrates lexical parsing, tokenization, and query evaluation skills.
+
+Why Recipes?
+Universal domain (everyone eats)
+Easy to explain in interviews
+Clear use case for complex Boolean queries
+Example: (italian OR mexican) AND tomatoes AND NOT indian AND vegetarian
+Tech Stack - Phase 1
+Backend: C# / ASP.NET Core Web API
+Parser module (the showcase piece - from work experience, sanitized)
+Mock recipe data (in-memory or JSON)
+RESTful endpoints for query parsing and search
+Frontend: Angular
+UI already wireframed in HTML (see attached file)
+Real-time query building as users make selections
+Parse tree visualization
+Architecture
+
+Angular Frontend
+    ↓ HTTP
+ASP.NET Core Web API
+    ↓
+C# Parser Module (lexer → tokenizer → AST → evaluator)
+    ↓
+Mock Recipe Dataset
+```
+
+## Key Features
+1. **Cuisine** - Include OR Exclude (e.g., include Italian, exclude Indian)
+2. **Ingredients** - Include OR Exclude (e.g., must have tomatoes, no nuts)
+3. **Dietary** - Restrictions like vegetarian, vegan, gluten-free
+4. **Options** - Quick/Easy checkboxes
+5. **Real-time Query Display** - Shows Boolean expression as it builds
+6. **Parse Tree View** - Visual representation of the parsed expression
+
+## API Endpoints Needed
+```
+POST /api/recipes/search
+  Body: { "query": "italian AND tomatoes AND NOT nuts" }
+  Response: { "results": [...], "parseTree": {...}, "executionTime": "2ms" }
+
+GET /api/recipes/validate
+  Query: ?query=italian%20AND%20tomatoes
+  Response: { "isValid": true, "parseTree": {...} }
+Parser Requirements
+Support operators: AND, OR, NOT, parentheses for grouping
+Optional: XOR (for future enhancement)
+Build expression tree (AST)
+Evaluate against recipe dataset
+Return matched recipes + parse tree for visualization
+Phase 2 (Later)
+Rebuild in Blazor WebAssembly to show learning ability
+Interview story: "Built first in Angular (familiar tools), then explored Blazor"
+Deployment
+Can run locally for demos
+Optional: Railway.app or Render.com (simple deployment, no cloud experience needed)
+Portfolio Value
+Showcases real C# parser from work experience
+Demonstrates full-stack capabilities
+Shows clean code architecture
+Proves ability to explain complex logic simply
+Attached: recipe-finder-v2.html - Working wireframe with all UI interactions (use as reference for Angular components)
+
+Polish Checklist (5 min each):
+ README.md - Architecture diagram + "Why I built this"
+ Parse Tree Visualization - That toggle you have? Make it look great
+ Error Handling - Show a nice message for invalid queries
+ Performance Metric - Display "Parsed in X ms"
+ Sample Queries - Quick buttons: "Try: Italian + Tomatoes", etc.
+ Unit Tests - Even just 3-4 tests for parser edge cases
+
+/*******************************************************/
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder - Boolean Query Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .builder-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .builder-title {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            min-width: 200px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        select:hover {
+            border-color: #667eea;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-add {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-add:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+        }
+
+        .include-exclude-toggle {
+            display: flex;
+            gap: 0;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+
+        .toggle-btn {
+            padding: 8px 20px;
+            background: transparent;
+            color: #666;
+            border: none;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: #28a745;
+            color: white;
+        }
+
+        .toggle-btn.exclude.active {
+            background: #dc3545;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .toggle-btn.active:hover {
+            opacity: 0.9;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .query-display {
+            margin: 30px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 8px;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+        }
+
+        .query-display h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .query-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            min-height: 60px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .query-text.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .parse-tree-toggle {
+            margin-top: 15px;
+        }
+
+        .parse-tree {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            display: none;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .parse-tree.visible {
+            display: block;
+        }
+
+        .search-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 50px;
+            font-size: 1.3em;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+        }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102,126,234,0.5);
+        }
+
+        .search-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-section {
+            padding: 40px;
+            display: none;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .results-header {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .results-count {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .recipe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .recipe-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .recipe-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .recipe-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .recipe-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 0.85em;
+            color: #555;
+        }
+
+        .tag.cuisine {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tag.diet {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .selected-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .selected-item {
+            padding: 6px 12px;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .selected-item.include {
+            background: #28a745;
+        }
+
+        .selected-item.exclude {
+            background: #dc3545;
+        }
+
+        .selected-item .remove-x {
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .selected-item .remove-x:hover {
+            opacity: 1;
+        }
+
+        .operator-toggle {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .operator-toggle label {
+            font-weight: normal;
+            margin: 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .operator-btn {
+            padding: 6px 15px;
+            background: #e9ecef;
+            color: #666;
+            border: 2px solid transparent;
+            font-size: 0.9em;
+            min-width: 60px;
+        }
+
+        .operator-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .operator-btn:hover {
+            background: #d4d8dd;
+        }
+
+        .operator-btn.active:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍳 Recipe Finder</h1>
+            <p>Boolean Query Builder - Portfolio Demo</p>
+        </div>
+
+        <div class="builder-section">
+            <h2 class="builder-title">Build Your Search Query</h2>
+
+            <!-- CUISINE TYPE -->
+            <div class="control-group">
+                <label>Cuisine Type:</label>
+                <div class="control-row">
+                    <select id="cuisineSelect">
+                        <option value="">Select cuisine...</option>
+                        <option value="italian">Italian</option>
+                        <option value="mexican">Mexican</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="indian">Indian</option>
+                        <option value="thai">Thai</option>
+                        <option value="american">American</option>
+                        <option value="mediterranean">Mediterranean</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="french">French</option>
+                    </select>
+                    <div class="include-exclude-toggle">
+                        <button class="toggle-btn active" onclick="setCuisineMode('include')">Include</button>
+                        <button class="toggle-btn exclude" onclick="setCuisineMode('exclude')">Exclude</button>
+                    </div>
+                    <button class="btn-add" onclick="addCuisine()">Add</button>
+                </div>
+                <div class="selected-items" id="cuisineIncludeItems"></div>
+                <div class="selected-items" id="cuisineExcludeItems"></div>
+                <div class="operator-toggle" id="cuisineOperator" style="display: none;">
+                    <label>Combine included with:</label>
+                    <button class="operator-btn active" onclick="setCuisineOperator('OR')">OR</button>
+                    <button class="operator-btn" onclick="setCuisineOperator('AND')">AND</button>
+                </div>
+            </div>
+
+            <!-- INGREDIENTS -->
+            <div class="control-group">
+                <label>Ingredients:</label>
+                <div class="control-row">
+                    <select id="ingredientSelect">
+                        <option value="">Select ingredient...</option>
+                        <option value="tomatoes">Tomatoes</option>
+                        <option value="garlic">Garlic</option>
+                        <option value="onions">Onions</option>
+                        <option value="basil">Basil</option>
+                        <option value="chicken">Chicken</option>
+                        <option value="beef">Beef</option>
+                        <option value="cheese">Cheese</option>
+                        <option value="pasta">Pasta</option>
+                        <option value="rice">Rice</option>
+                        <option value="beans">Beans</option>
+                        <option value="nuts">Nuts</option>
+                        <option value="shellfish">Shellfish</option>
+                        <option value="eggs">Eggs</option>
+                        <option value="mushrooms">Mushrooms</option>
+                    </select>
+                    <div class="include-exclude-toggle">
+                        <button class="toggle-btn active" onclick="setIngredientMode('include')">Include</button>
+                        <button class="toggle-btn exclude" onclick="setIngredientMode('exclude')">Exclude</button>
+                    </div>
+                    <button class="btn-add" onclick="addIngredient()">Add</button>
+                </div>
+                <div class="selected-items" id="ingredientIncludeItems"></div>
+                <div class="selected-items" id="ingredientExcludeItems"></div>
+                <div class="operator-toggle" id="ingredientIncludeOperator" style="display: none;">
+                    <label>Combine included with:</label>
+                    <button class="operator-btn active" onclick="setIngredientIncludeOperator('AND')">AND</button>
+                    <button class="operator-btn" onclick="setIngredientIncludeOperator('OR')">OR</button>
+                </div>
+            </div>
+
+            <!-- DIETARY RESTRICTIONS -->
+            <div class="control-group">
+                <label>Dietary Restrictions:</label>
+                <div class="control-row">
+                    <select id="dietSelect">
+                        <option value="">Select diet...</option>
+                        <option value="vegetarian">Vegetarian</option>
+                        <option value="vegan">Vegan</option>
+                        <option value="gluten_free">Gluten Free</option>
+                        <option value="dairy_free">Dairy Free</option>
+                        <option value="keto">Keto</option>
+                        <option value="paleo">Paleo</option>
+                        <option value="low_carb">Low Carb</option>
+                    </select>
+                    <button class="btn-add" onclick="addDiet()">Add</button>
+                </div>
+                <div class="selected-items" id="dietItems"></div>
+                <div class="operator-toggle" id="dietOperator" style="display: none;">
+                    <label>Combine with:</label>
+                    <button class="operator-btn active" onclick="setDietOperator('AND')">AND</button>
+                    <button class="operator-btn" onclick="setDietOperator('OR')">OR</button>
+                </div>
+            </div>
+
+            <!-- ADDITIONAL OPTIONS -->
+            <div class="control-group">
+                <label>Additional Options:</label>
+                <div class="control-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="quickCheck" onchange="updateQuery()">
+                        <span>Quick (under 30 minutes)</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="easyCheck" onchange="updateQuery()">
+                        <span>Easy (beginner friendly)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- QUERY DISPLAY -->
+            <div class="query-display">
+                <h3>📝 Your Search Query:</h3>
+                <div class="query-text empty" id="queryText">Build your query by making selections above...</div>
+                <button class="btn-add parse-tree-toggle" onclick="toggleParseTree()">Show Parse Tree</button>
+                <div class="parse-tree" id="parseTree"></div>
+            </div>
+
+            <button class="search-button" id="searchBtn" onclick="performSearch()" disabled>
+                🔍 GO - Search Recipes
+            </button>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <h2 class="results-header">Results: <span class="results-count" id="resultsCount">0</span> recipes found</h2>
+            <div class="recipe-grid" id="recipeGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let state = {
+            cuisines: {
+                include: [],
+                exclude: [],
+                mode: 'include',
+                operator: 'OR'
+            },
+            ingredients: {
+                include: [],
+                exclude: [],
+                mode: 'include',
+                includeOperator: 'AND'
+            },
+            diets: [],
+            dietOperator: 'AND',
+            quick: false,
+            easy: false
+        };
+
+        // Mock recipe database
+        const recipes = [
+            { name: "Margherita Pizza", time: 25, cuisine: "italian", ingredients: ["tomatoes", "cheese", "basil"], tags: ["vegetarian"], excludes: [] },
+            { name: "Caprese Salad", time: 10, cuisine: "italian", ingredients: ["tomatoes", "cheese", "basil"], tags: ["vegetarian", "quick", "easy"], excludes: [] },
+            { name: "Pasta Primavera", time: 20, cuisine: "italian", ingredients: ["pasta", "tomatoes", "garlic"], tags: ["vegetarian", "quick"], excludes: [] },
+            { name: "Vegan Tacos", time: 15, cuisine: "mexican", ingredients: ["beans", "tomatoes", "onions"], tags: ["vegan", "quick", "easy", "dairy_free"], excludes: ["dairy", "cheese"] },
+            { name: "Pad Thai", time: 30, cuisine: "thai", ingredients: ["rice", "garlic", "eggs"], tags: ["quick"], excludes: [] },
+            { name: "Green Curry", time: 35, cuisine: "thai", ingredients: ["chicken", "basil", "garlic"], tags: ["dairy_free"], excludes: ["dairy"] },
+            { name: "Hummus Bowl", time: 10, cuisine: "mediterranean", ingredients: ["beans", "garlic", "tomatoes"], tags: ["vegan", "quick", "easy", "gluten_free", "dairy_free"], excludes: ["gluten", "dairy"] },
+            { name: "Greek Salad", time: 15, cuisine: "mediterranean", ingredients: ["tomatoes", "onions", "cheese"], tags: ["vegetarian", "quick", "easy", "gluten_free"], excludes: ["gluten"] },
+            { name: "Veggie Stir Fry", time: 20, cuisine: "chinese", ingredients: ["rice", "garlic", "onions"], tags: ["vegan", "quick", "dairy_free", "gluten_free"], excludes: ["dairy", "gluten"] },
+            { name: "Butter Chicken", time: 45, cuisine: "indian", ingredients: ["chicken", "tomatoes", "garlic"], tags: [], excludes: [] },
+            { name: "Dal Tadka", time: 30, cuisine: "indian", ingredients: ["beans", "tomatoes", "garlic", "onions"], tags: ["vegetarian", "vegan", "gluten_free", "dairy_free"], excludes: ["gluten", "dairy"] },
+            { name: "Beef Tacos", time: 20, cuisine: "mexican", ingredients: ["beef", "cheese", "tomatoes"], tags: ["quick"], excludes: [] },
+            { name: "Spaghetti Carbonara", time: 25, cuisine: "italian", ingredients: ["pasta", "eggs", "cheese"], tags: ["quick"], excludes: [] },
+            { name: "Mushroom Risotto", time: 40, cuisine: "italian", ingredients: ["rice", "mushrooms", "cheese", "garlic"], tags: ["vegetarian"], excludes: [] },
+            { name: "General Tso's Chicken", time: 30, cuisine: "chinese", ingredients: ["chicken", "rice", "garlic"], tags: [], excludes: [] },
+        ];
+
+        // CUISINE FUNCTIONS
+        function setCuisineMode(mode) {
+            state.cuisines.mode = mode;
+            const container = document.querySelectorAll('.control-group')[0];
+            const buttons = container.querySelectorAll('.include-exclude-toggle .toggle-btn');
+            buttons[0].classList.toggle('active', mode === 'include');
+            buttons[1].classList.toggle('active', mode === 'exclude');
+        }
+
+        function addCuisine() {
+            const select = document.getElementById('cuisineSelect');
+            const value = select.value;
+            if (!value) return;
+
+            const list = state.cuisines.mode === 'include' ? state.cuisines.include : state.cuisines.exclude;
+            const otherList = state.cuisines.mode === 'include' ? state.cuisines.exclude : state.cuisines.include;
+           
+            // Remove from other list if present
+            const otherIndex = otherList.indexOf(value);
+            if (otherIndex > -1) {
+                otherList.splice(otherIndex, 1);
+            }
+
+            if (!list.includes(value)) {
+                list.push(value);
+                updateDisplay();
+            }
+            select.value = '';
+        }
+
+        function removeCuisine(value, mode) {
+            const list = mode === 'include' ? state.cuisines.include : state.cuisines.exclude;
+            const index = list.indexOf(value);
+            if (index > -1) {
+                list.splice(index, 1);
+                updateDisplay();
+            }
+        }
+
+        function setCuisineOperator(op) {
+            state.cuisines.operator = op;
+            updateOperatorButtons('cuisineOperator', op);
+            updateDisplay();
+        }
+
+        // INGREDIENT FUNCTIONS
+        function setIngredientMode(mode) {
+            state.ingredients.mode = mode;
+            const container = document.querySelectorAll('.control-group')[1];
+            const buttons = container.querySelectorAll('.include-exclude-toggle .toggle-btn');
+            buttons[0].classList.toggle('active', mode === 'include');
+            buttons[1].classList.toggle('active', mode === 'exclude');
+        }
+
+        function addIngredient() {
+            const select = document.getElementById('ingredientSelect');
+            const value = select.value;
+            if (!value) return;
+
+            const list = state.ingredients.mode === 'include' ? state.ingredients.include : state.ingredients.exclude;
+            const otherList = state.ingredients.mode === 'include' ? state.ingredients.exclude : state.ingredients.include;
+           
+            // Remove from other list if present
+            const otherIndex = otherList.indexOf(value);
+            if (otherIndex > -1) {
+                otherList.splice(otherIndex, 1);
+            }
+
+            if (!list.includes(value)) {
+                list.push(value);
+                updateDisplay();
+            }
+            select.value = '';
+        }
+
+        function removeIngredient(value, mode) {
+            const list = mode === 'include' ? state.ingredients.include : state.ingredients.exclude;
+            const index = list.indexOf(value);
+            if (index > -1) {
+                list.splice(index, 1);
+                updateDisplay();
+            }
+        }
+
+        function setIngredientIncludeOperator(op) {
+            state.ingredients.includeOperator = op;
+            updateOperatorButtons('ingredientIncludeOperator', op);
+            updateDisplay();
+        }
+
+        // DIET FUNCTIONS
+        function addDiet() {
+            const select = document.getElementById('dietSelect');
+            const value = select.value;
+            if (value && !state.diets.includes(value)) {
+                state.diets.push(value);
+                updateDisplay();
+            }
+            select.value = '';
+        }
+
+        function removeDiet(value) {
+            state.diets = state.diets.filter(d => d !== value);
+            updateDisplay();
+        }
+
+        function setDietOperator(op) {
+            state.dietOperator = op;
+            updateOperatorButtons('dietOperator', op);
+            updateDisplay();
+        }
+
+        // HELPER FUNCTIONS
+        function updateOperatorButtons(id, operator) {
+            const container = document.getElementById(id);
+            const buttons = container.querySelectorAll('.operator-btn');
+            buttons.forEach(btn => {
+                const btnOp = btn.textContent;
+                btn.classList.toggle('active', btnOp === operator);
+            });
+        }
+
+        function updateQuery() {
+            state.quick = document.getElementById('quickCheck').checked;
+            state.easy = document.getElementById('easyCheck').checked;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            // Update cuisine items
+            const cuisineInclude = document.getElementById('cuisineIncludeItems');
+            cuisineInclude.innerHTML = state.cuisines.include.map(c =>
+                `<div class="selected-item include">${c} <span class="remove-x" onclick="removeCuisine('${c}', 'include')">✕</span></div>`
+            ).join('');
+
+            const cuisineExclude = document.getElementById('cuisineExcludeItems');
+            cuisineExclude.innerHTML = state.cuisines.exclude.map(c =>
+                `<div class="selected-item exclude">NOT ${c} <span class="remove-x" onclick="removeCuisine('${c}', 'exclude')">✕</span></div>`
+            ).join('');
+
+            // Show/hide cuisine operator
+            const cuisineOp = document.getElementById('cuisineOperator');
+            cuisineOp.style.display = state.cuisines.include.length > 1 ? 'flex' : 'none';
+
+            // Update ingredient items
+            const ingredientInclude = document.getElementById('ingredientIncludeItems');
+            ingredientInclude.innerHTML = state.ingredients.include.map(i =>
+                `<div class="selected-item include">${i} <span class="remove-x" onclick="removeIngredient('${i}', 'include')">✕</span></div>`
+            ).join('');
+
+            const ingredientExclude = document.getElementById('ingredientExcludeItems');
+            ingredientExclude.innerHTML = state.ingredients.exclude.map(i =>
+                `<div class="selected-item exclude">NOT ${i} <span class="remove-x" onclick="removeIngredient('${i}', 'exclude')">✕</span></div>`
+            ).join('');
+
+            // Show/hide ingredient operator
+            const ingredientOp = document.getElementById('ingredientIncludeOperator');
+            ingredientOp.style.display = state.ingredients.include.length > 1 ? 'flex' : 'none';
+
+            // Update diet items
+            const dietItems = document.getElementById('dietItems');
+            dietItems.innerHTML = state.diets.map(d =>
+                `<div class="selected-item include">${d.replace('_', ' ')} <span class="remove-x" onclick="removeDiet('${d}')">✕</span></div>`
+            ).join('');
+
+            // Show/hide diet operator
+            const dietOp = document.getElementById('dietOperator');
+            dietOp.style.display = state.diets.length > 1 ? 'flex' : 'none';
+
+            // Build query string
+            const query = buildQueryString();
+            const queryText = document.getElementById('queryText');
+           
+            if (query) {
+                queryText.textContent = query;
+                queryText.classList.remove('empty');
+                document.getElementById('searchBtn').disabled = false;
+            } else {
+                queryText.textContent = 'Build your query by making selections above...';
+                queryText.classList.add('empty');
+                document.getElementById('searchBtn').disabled = true;
+            }
+
+            // Update parse tree
+            updateParseTree(query);
+        }
+
+        function buildQueryString() {
+            const parts = [];
+
+            // Add included cuisines
+            if (state.cuisines.include.length > 0) {
+                if (state.cuisines.include.length === 1) {
+                    parts.push(state.cuisines.include[0]);
+                } else {
+                    parts.push('(' + state.cuisines.include.join(` ${state.cuisines.operator} `) + ')');
+                }
+            }
+
+            // Add included ingredients
+            if (state.ingredients.include.length > 0) {
+                if (state.ingredients.include.length === 1) {
+                    parts.push(state.ingredients.include[0]);
+                } else {
+                    parts.push('(' + state.ingredients.include.join(` ${state.ingredients.includeOperator} `) + ')');
+                }
+            }
+
+            // Add diets
+            if (state.diets.length > 0) {
+                if (state.diets.length === 1) {
+                    parts.push(state.diets[0]);
+                } else {
+                    parts.push('(' + state.diets.join(` ${state.dietOperator} `) + ')');
+                }
+            }
+
+            // Add quick/easy
+            if (state.quick) parts.push('quick');
+            if (state.easy) parts.push('easy');
+
+            // Add excluded cuisines
+            if (state.cuisines.exclude.length > 0) {
+                if (state.cuisines.exclude.length === 1) {
+                    parts.push('NOT ' + state.cuisines.exclude[0]);
+                } else {
+                    parts.push('NOT (' + state.cuisines.exclude.join(' OR ') + ')');
+                }
+            }
+
+            // Add excluded ingredients
+            if (state.ingredients.exclude.length > 0) {
+                if (state.ingredients.exclude.length === 1) {
+                    parts.push('NOT ' + state.ingredients.exclude[0]);
+                } else {
+                    parts.push('NOT (' + state.ingredients.exclude.join(' OR ') + ')');
+                }
+            }
+
+            return parts.join(' AND ');
+        }
+
+        function updateParseTree(query) {
+            if (!query) {
+                document.getElementById('parseTree').textContent = 'No query to parse';
+                return;
+            }
+
+            const tree = generateParseTree(query);
+            document.getElementById('parseTree').textContent = tree;
+        }
+
+        function generateParseTree(query) {
+            let tree = 'Query Parse Tree:\n\n';
+            tree += 'AND\n';
+           
+            const parts = query.split(' AND ');
+            parts.forEach((part, index) => {
+                const isLast = index === parts.length - 1;
+                const prefix = isLast ? '└── ' : '├── ';
+               
+                if (part.includes(' OR ')) {
+                    tree += prefix + 'OR\n';
+                    const orParts = part.replace(/[()]/g, '').split(' OR ');
+                    orParts.forEach((orPart, orIndex) => {
+                        const orIsLast = orIndex === orParts.length - 1;
+                        const orPrefix = isLast ? '    ' : '│   ';
+                        const orBranch = orIsLast ? '└── ' : '├── ';
+                        tree += orPrefix + orBranch + orPart.trim() + '\n';
+                    });
+                } else {
+                    tree += prefix + part.trim() + '\n';
+                }
+            });
+
+            return tree;
+        }
+
+        function toggleParseTree() {
+            const parseTree = document.getElementById('parseTree');
+            parseTree.classList.toggle('visible');
+           
+            const btn = event.target;
+            btn.textContent = parseTree.classList.contains('visible') ? 'Hide Parse Tree' : 'Show Parse Tree';
+        }
+
+        function performSearch() {
+            // Filter recipes based on query
+            const matchedRecipes = recipes.filter(recipe => {
+                // Check included cuisines (OR logic)
+                if (state.cuisines.include.length > 0) {
+                    const cuisineMatch = state.cuisines.operator === 'OR'
+                        ? state.cuisines.include.includes(recipe.cuisine)
+                        : state.cuisines.include.every(c => c === recipe.cuisine);
+                   
+                    if (!cuisineMatch) return false;
+                }
+
+                // Check excluded cuisines
+                if (state.cuisines.exclude.length > 0) {
+                    if (state.cuisines.exclude.includes(recipe.cuisine)) {
+                        return false;
+                    }
+                }
+
+                // Check included ingredients
+                if (state.ingredients.include.length > 0) {
+                    const ingredientMatch = state.ingredients.includeOperator === 'AND'
+                        ? state.ingredients.include.every(ing => recipe.ingredients.includes(ing))
+                        : state.ingredients.include.some(ing => recipe.ingredients.includes(ing));
+                   
+                    if (!ingredientMatch) return false;
+                }
+
+                // Check excluded ingredients
+                if (state.ingredients.exclude.length > 0) {
+                    const hasExcluded = state.ingredients.exclude.some(ing => recipe.ingredients.includes(ing));
+                    if (hasExcluded) return false;
+                }
+
+                // Check diets
+                if (state.diets.length > 0) {
+                    const dietMatch = state.dietOperator === 'AND'
+                        ? state.diets.every(diet => recipe.tags.includes(diet))
+                        : state.diets.some(diet => recipe.tags.includes(diet));
+                   
+                    if (!dietMatch) return false;
+                }
+
+                // Check quick/easy
+                if (state.quick && !recipe.tags.includes('quick')) return false;
+                if (state.easy && !recipe.tags.includes('easy')) return false;
+
+                return true;
+            });
+
+            displayResults(matchedRecipes);
+        }
+
+        function displayResults(matchedRecipes) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsCount = document.getElementById('resultsCount');
+            const recipeGrid = document.getElementById('recipeGrid');
+
+            resultsCount.textContent = matchedRecipes.length;
+           
+            recipeGrid.innerHTML = matchedRecipes.map(recipe => `
+                <div class="recipe-card">
+                    <h3>${recipe.name}</h3>
+                    <div class="recipe-meta">
+                        <span>⏱️ ${recipe.time} min</span>
+                    </div>
+                    <div class="recipe-tags">
+                        <span class="tag cuisine">${recipe.cuisine}</span>
+                        ${recipe.ingredients.slice(0, 3).map(ing => `<span class="tag">${ing}</span>`).join('')}
+                        ${recipe.tags.map(tag => `<span class="tag diet">${tag.replace('_', ' ')}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            resultsSection.classList.add('visible');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>

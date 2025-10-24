@@ -1,0 +1,6 @@
+@RecipeParser.Api_HostAddress = http://localhost:5204
+
+GET {{RecipeParser.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
